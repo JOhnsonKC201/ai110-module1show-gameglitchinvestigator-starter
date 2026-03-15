@@ -5,12 +5,31 @@ import streamlit as st
 # so app.py only handles UI and app.py imports the fixed functions.
 from logic_utils import get_range_for_difficulty, parse_guess, check_guess, update_score
 
-# Hint messages keyed by outcome
+# Directional hint messages keyed by outcome
 HINT_MESSAGES = {
     "Win": "🎉 Correct!",
     "Too Low": "📈 Go HIGHER!",
     "Too High": "📉 Go LOWER!",
 }
+
+# Temperature levels: (max_distance, label, hex_color)
+TEMP_LEVELS = [
+    (5,   "🔥 Scorching!",  "#FF4500"),
+    (15,  "♨️  Hot",         "#FF8C00"),
+    (25,  "😐 Warm",         "#FFA500"),
+    (40,  "🌊 Cool",         "#4169E1"),
+    (100, "❄️  Freezing!",   "#00BFFF"),
+]
+
+
+def get_temperature(guess: int, secret: int):
+    """Return (label, color_hex) based on how close the guess is."""
+    distance = abs(guess - secret)
+    for threshold, label, color in TEMP_LEVELS:
+        if distance <= threshold:
+            return label, color
+    return "❄️  Freezing!", "#00BFFF"
+
 
 st.set_page_config(page_title="Glitchy Guesser", page_icon="🎮")
 
@@ -50,7 +69,7 @@ if "status" not in st.session_state:
     st.session_state.status = "playing"
 
 if "history" not in st.session_state:
-    st.session_state.history = []
+    st.session_state.history = []  # list of dicts: {Attempt, Guess, Direction, Temperature}
 
 st.subheader("Make a guess")
 
@@ -93,6 +112,15 @@ if st.session_state.status != "playing":
         st.success("You already won. Start a new game to play again.")
     else:
         st.error("Game over. Start a new game to try again.")
+
+    # Summary table on game end
+    if st.session_state.history:
+        st.subheader("📋 Session Summary")
+        st.dataframe(
+            st.session_state.history,
+            use_container_width=True,
+            hide_index=True,
+        )
     st.stop()
 
 if submit:
@@ -101,17 +129,35 @@ if submit:
     ok, guess_int, err = parse_guess(raw_guess)
 
     if not ok:
-        st.session_state.history.append(raw_guess)
+        st.session_state.history.append({
+            "Attempt": st.session_state.attempts - 1,
+            "Guess": raw_guess,
+            "Direction": "❌ Invalid",
+            "Temperature": "—",
+        })
         st.error(err)
     else:
-        st.session_state.history.append(guess_int)
-
-        # FIX: Bug 3 — removed even/odd string conversion; secret is always int.
         secret = st.session_state.secret
         outcome = check_guess(guess_int, secret)
+        temp_label, temp_color = get_temperature(guess_int, secret)
 
-        if show_hint:
-            st.warning(HINT_MESSAGES[outcome])
+        st.session_state.history.append({
+            "Attempt": st.session_state.attempts - 1,
+            "Guess": guess_int,
+            "Direction": HINT_MESSAGES[outcome],
+            "Temperature": "🎯 Bullseye" if outcome == "Win" else temp_label,
+        })
+
+        if show_hint and outcome != "Win":
+            direction_msg = HINT_MESSAGES[outcome]
+            st.markdown(
+                f"<div style='padding:12px 16px; border-radius:8px; "
+                f"background:{temp_color}22; border-left:5px solid {temp_color};'>"
+                f"<span style='font-size:1.3em;'>{temp_label}</span>"
+                f"&nbsp;&nbsp;<strong>{direction_msg}</strong>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
 
         st.session_state.score = update_score(
             current_score=st.session_state.score,
@@ -134,6 +180,15 @@ if submit:
                     f"The secret was {st.session_state.secret}. "
                     f"Score: {st.session_state.score}"
                 )
+
+# Running guess history table (visible while game is in progress)
+if st.session_state.history:
+    st.subheader("📋 Guess History")
+    st.dataframe(
+        st.session_state.history,
+        use_container_width=True,
+        hide_index=True,
+    )
 
 st.divider()
 st.caption("Built by an AI that claims this code is production-ready.")
