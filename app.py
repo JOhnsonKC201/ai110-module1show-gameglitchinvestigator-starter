@@ -2,12 +2,7 @@ import random
 import streamlit as st
 
 def get_range_for_difficulty(difficulty: str):
-    if difficulty == "Easy":
-        return 1, 20
-    if difficulty == "Normal":
-        return 1, 100
-    if difficulty == "Hard":
-        return 1, 50
+    # Always return 1 to 100 for all difficulties
     return 1, 100
 
 
@@ -26,6 +21,9 @@ def parse_guess(raw: str):
     except Exception:
         return False, None, "That is not a number."
 
+    if value < 1 or value > 100:
+        return False, None, "Guess must be between 1 and 100."
+
     return True, value, None
 
 
@@ -34,17 +32,20 @@ def check_guess(guess, secret):
         return "Win", "🎉 Correct!"
 
     try:
-        if guess > secret:
-            return "Too High", "📈 Go HIGHER!"
+        if guess < secret:
+            return "Too Low", "📈 Go HIGHER!"
+        elif guess > secret:
+            return "Too High", "📉 Go LOWER!"
         else:
-            return "Too Low", "📉 Go LOWER!"
+            return "Win", "🎉 Correct!"
     except TypeError:
         g = str(guess)
         if g == secret:
             return "Win", "🎉 Correct!"
-        if g > secret:
-            return "Too High", "📈 Go HIGHER!"
-        return "Too Low", "📉 Go LOWER!"
+        elif g < secret:
+            return "Too Low", "📈 Go HIGHER!"
+        elif g > secret:
+            return "Too High", "📉 Go LOWER!"
 
 
 def update_score(current_score: int, outcome: str, attempt_number: int):
@@ -90,7 +91,7 @@ st.sidebar.caption(f"Range: {low} to {high}")
 st.sidebar.caption(f"Attempts allowed: {attempt_limit}")
 
 if "secret" not in st.session_state:
-    st.session_state.secret = random.randint(low, high)
+    st.session_state.secret = random.randint(1, 100) 
 
 if "attempts" not in st.session_state:
     st.session_state.attempts = 1
@@ -132,8 +133,11 @@ with col3:
     show_hint = st.checkbox("Show hint", value=True)
 
 if new_game:
-    st.session_state.attempts = 0
+    st.session_state.attempts = 1
     st.session_state.secret = random.randint(1, 100)
+    st.session_state.score = 0
+    st.session_state.status = "playing"
+    st.session_state.history = []
     st.success("New game started.")
     st.rerun()
 
