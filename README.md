@@ -26,12 +26,23 @@ It wrote the code, ran away, and now the game is unplayable.
 ## 📝 Document Your Experience
 
 - [ ] Describe the game's purpose.
+      The main purpose of this game is number guessing where the player tries to guess a secret number within a limited number of attempts and you can choose your own level of difficulty  and after each guesses the game tell you either to go up or down  id choosen secret number you won.  
+
 - [ ] Detail which bugs you found.
+      a. Bug 1 was secret number kept changing which is because of the Streamlit re-executed the entire script from top to bottom.
+      b. Bug 2 was the hints were backwards as the original chech_guess function had the outcome labels swapped in that guess wining was almost impossible. 
+      c. Bug 3 was even attempt string convesrion broke comparisons as the code converted the secret num to a string before comparision to the guess. 
+
+
 - [ ] Explain what fixes you applied.
+      fro bug 1 i wrapped the secret number assignment inside if "secret" not in st.session_state.
+      for bug 2  i re write the whole check_guess so guess < secret returns "Too Low" paired with "Go HIGHER" and guess > secret returns "Too High" paired with "Go LOWER.
+      and for bug 3 secret comared as integer. 
 
 ## 📸 Demo
 
 - [ ] [Insert a screenshot of your fixed, winning game here]
+      ![alt text](image.png)
 
 ## 🚀 Stretch Features
 
